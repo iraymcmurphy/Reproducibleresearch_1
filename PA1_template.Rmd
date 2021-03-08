@@ -1,0 +1,101 @@
+---
+title: "PA1_template"
+author: "Igor Vasyutin"
+date: "08 03 2021"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## **Reproducible Research: Course Project 1**
+
+### Loading and preprocessing the data
+
+Loading data
+```{r}
+activity <- read.csv("activity.csv")
+head(activity)
+```
+
+Convert date into date format
+```{r}
+activity$date <- as.Date(activity$date)
+```
+
+### What is mean total number of steps taken per day?
+
+Calculate mean per day
+```{r}
+meanday <- aggregate(steps ~ date, data = activity, mean)
+head(meanday)
+```
+
+print hist, mean and median for mean steps per day
+```{r}
+hist(meanday$steps,breaks = 20)
+mean(meanday$steps,na.rm=TRUE)
+median(meanday$steps,na.rm=TRUE)
+```
+
+### What is the average daily activity pattern?
+
+Calculate mean per interval and make a plot of average activity
+```{r}
+meanperiod <- aggregate(steps ~ interval, data=activity, mean)
+head(meanperiod)
+plot(steps ~ interval, type = "l", data=meanperiod)
+```
+
+5-minutes interval with max number of steps
+```{r}
+meanperiod[meanperiod$steps==max(meanperiod$steps, na.rm=TRUE),1]
+```
+
+### Imputing missing values
+
+How many NA's:
+```{r}
+sum(is.na(activity$steps))
+sum(is.na(activity$steps))/length(activity$steps)
+```
+
+Filling NA's with average for an interval across all days
+```{r}
+activity.imputed <- activity
+for (i in 1:nrow(activity.imputed)){
+    if (is.na(activity.imputed$steps[i])){
+        intrvl <- activity.imputed$interval[i]
+        activity.imputed$steps[i]<-meanperiod[meanperiod$interval==intrvl,2]
+    }
+}
+sum(is.na(activity.imputed$steps))
+```
+
+print hist, mean and median for mean steps per day on imputed dataset
+```{r}
+meanday.imputed <- aggregate(steps ~ date, data = activity.imputed, mean)
+hist(meanday.imputed$steps,breaks = 20)
+mean(meanday.imputed$steps)
+median(meanday.imputed$steps)
+```
+
+### Are there differences in activity patterns between weekdays and weekends?
+
+Make a vector of weekdays and weekends
+```{r}
+activity.imputed$weekdays<-weekdays(activity.imputed$date,abbreviate = TRUE)
+activity.imputed$weekdays[activity.imputed$weekdays == "Сб" | activity.imputed$weekdays == "Вс"] <- "WE"
+activity.imputed$weekdays[activity.imputed$weekdays != "WE"] <- "WD"
+```
+
+Make a plot comparing average activity at weekdays and weekends
+```{r}
+meanperiod.imputed.wd <- aggregate(steps ~ interval, data = activity.imputed[activity.imputed$weekdays=="WD",], mean)
+meanperiod.imputed.we <- aggregate(steps ~ interval, data = activity.imputed[activity.imputed$weekdays=="WE",], mean)
+with(meanperiod.imputed.wd, plot(interval, steps, type="l"))
+with(meanperiod.imputed.we, lines(interval, steps, col = "red"))
+```
